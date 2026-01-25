@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ssu-maroon: #800000;
+  --color-ssu-gold: #FFD700;
+}
+
+/* This block fixes the visibility by forcing a light background */
+@layer base {
+  :root {
+    background-color: #f3f4f6 !important;
+    color: #1a1a1a !important;
+    color-scheme: light;
+  }
+}
