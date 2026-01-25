@@ -1,11 +1,13 @@
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { LayoutDashboard, Users, BookOpen, FileText, LogOut, Settings } from 'lucide-react';
+import ChangePasswordModal from './ChangePasswordModal'; // Import the new modal
 
 const Header = ({ title }) => {
   const { user, logout } = useContext(AuthContext);
   const location = useLocation();
+  const [showPasswordModal, setShowPasswordModal] = useState(false); // State for modal
 
   const navItems = [
     { name: 'Reports', path: '/reports', icon: <FileText size={18} /> },
@@ -54,11 +56,20 @@ const Header = ({ title }) => {
             <p className="text-xs font-bold">{user?.name}</p>
             <p className="text-[10px] opacity-70 uppercase">{user?.role}</p>
           </div>
+          <button 
+               onClick={() => setShowPasswordModal(true)} 
+               className="bg-black/20 hover:bg-black/40 p-2 rounded-full transition"
+               title="Change Password"
+             >
+               <Settings size={18} />
+             </button>
           <button onClick={logout} className="bg-black/20 hover:bg-black/40 p-2 rounded-full transition">
             <LogOut size={16} />
           </button>
         </div>
       </div>
+      {/* Render Modal if True */}
+      {showPasswordModal && <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />}
     </nav>
   );
 };

@@ -1,7 +1,8 @@
 // App.jsx
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+// import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
 import { useContext } from 'react'; // 1. Ensure useContext is imported
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 
 import Login from './pages/Login';
 import FacultyDashboard from './pages/FacultyDashboard';
@@ -14,6 +15,7 @@ import FacultyManagement from './pages/FacultyManagement';
 import SubjectManagement from './pages/SubjectManagement';
 import StudentManagement from './pages/StudentManagement';
 import Reports from './pages/Reports';
+import ScanGuard from './pages/ScannerGuard';
 
 
 // Custom Protected Route Component
@@ -32,7 +34,7 @@ function AppContent() {
     <Router>
       <Routes>
         <Route path="/" element={<Login />} />
-        
+        <Route path="/scan/:type" element={<ScanGuard />} />
         <Route 
           path="/faculty-dashboard" 
           element={
