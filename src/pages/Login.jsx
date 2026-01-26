@@ -35,7 +35,7 @@ const Login = () => {
       <div className="max-w-md w-full bg-white rounded-xl shadow-2xl overflow-hidden border-t-8 border-ssu-maroon">
         <div className="p-8 text-center">
           {/* Ensure this file is in your /public folder */}
-          <img src="/logo192.png" alt="SSU Logo" className="w-24 mx-auto mb-4" />
+          <img src="/fac-dss-fe/logo192.png" alt="SSU Logo" className="w-24 mx-auto mb-4" />
           
           <h1 className="text-2xl font-bold text-ssu-maroon">FAC-DSS</h1>
           <p className="text-gray-500 text-sm">Faculty Attendance Checker</p>

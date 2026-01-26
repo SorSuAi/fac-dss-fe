@@ -16,7 +16,6 @@ const Header = ({ title }) => {
     { name: 'Subjects', path: '/manage-subjects', icon: <BookOpen size={18} /> },
     // Only show "System" to HR or Dean
     { name: 'System', path: '/management', icon: <Settings size={18} /> }, 
-
     { name: 'Back', path: '/admin-dashboard', icon: <BackpackIcon size={18} /> },
   ];
 

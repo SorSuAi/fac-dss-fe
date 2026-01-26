@@ -8,33 +8,36 @@ const ScanGuard = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user) return; // Wait for user to load
+    if (!user) return; // Wait for user data to load
 
-    // 1. SECURITY CHECK: Mismatched Roles
+    // 1. SECURITY: Prevent Students from scanning Faculty codes
     if (type === 'faculty' && user.role !== 'faculty') {
-      alert("FORBIDDEN: Students cannot use this QR code.");
-      navigate('/dashboard'); // Kick them back
+      alert("ACCESS DENIED: Students cannot use this QR code.");
+      navigate('/student-dashboard'); 
       return;
     }
 
     if (type === 'student' && user.role !== 'student') {
-      alert("FORBIDDEN: Faculty cannot use this QR code.");
-      navigate('/dashboard'); // Kick them back
+      alert("ACCESS DENIED: Faculty cannot use this QR code.");
+      navigate('/faculty-dashboard'); 
       return;
     }
 
-    // 2. SUCCESS: Redirect to the correct form
+    // 2. REDIRECT LOGIC (The Fix)
     if (type === 'faculty') {
-      navigate('/faculty/attendance-form');
+      // ✅ STOP auto-submit. Just go to the Dashboard.
+      navigate('/faculty-dashboard'); 
     } else {
+      // Students still go to their report form
       navigate('/student/report-form');
     }
 
   }, [type, user, navigate]);
 
   return (
-    <div className="h-screen flex items-center justify-center">
-      <p className="text-xl font-bold animate-pulse">Verifying ID...</p>
+    <div className="h-screen flex flex-col items-center justify-center bg-gray-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-ssu-maroon mb-4"></div>
+      <p className="text-gray-500 font-bold animate-pulse">Verifying Access...</p>
     </div>
   );
 };

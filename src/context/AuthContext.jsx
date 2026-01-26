@@ -13,6 +13,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     localStorage.removeItem('user');
     setUser(null);
+    window.location.href = '/fac-dss-fe/'; // Redirect to login page
   };
 
   return (
