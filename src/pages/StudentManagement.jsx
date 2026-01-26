@@ -1,14 +1,19 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext, useMemo } from 'react';
 import axios from 'axios';
 import Papa from 'papaparse';
 import { AuthContext } from '../context/AuthContext';
 import Header from '../components/Header';
-import { Upload, Search, User, Trash2, Edit, Plus, X } from 'lucide-react';
+import { Upload, Search, User, Trash2, Edit, Plus, X, Filter } from 'lucide-react';
 
 const StudentManagement = () => {
   const { user, logout } = useContext(AuthContext);
   const [students, setStudents] = useState([]);
-  const [filter, setFilter] = useState('');
+  
+  // --- NEW: Specific Filter States ---
+  const [search, setSearch] = useState('');
+  const [courseFilter, setCourseFilter] = useState('');
+  const [sectionFilter, setSectionFilter] = useState('');
+  
   const [showModal, setShowModal] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
 
@@ -36,6 +41,32 @@ const StudentManagement = () => {
     }
   };
 
+  // --- NEW: Helper to get unique options for dropdowns ---
+  const uniqueCourses = useMemo(() => {
+    return [...new Set(students.map(s => s.course).filter(Boolean))].sort();
+  }, [students]);
+
+  const uniqueSections = useMemo(() => {
+    // If a course is selected, only show sections for that course
+    const relevantStudents = courseFilter 
+      ? students.filter(s => s.course === courseFilter)
+      : students;
+    return [...new Set(relevantStudents.map(s => s.section).filter(Boolean))].sort();
+  }, [students, courseFilter]);
+
+  // --- UPDATED: Multi-condition Filter Logic ---
+  const filteredStudents = students.filter(s => {
+    const matchesSearch = 
+      s.name.toLowerCase().includes(search.toLowerCase()) || 
+      (s.idNumber && s.idNumber.toLowerCase().includes(search.toLowerCase())) ||
+      (s.email && s.email.toLowerCase().includes(search.toLowerCase()));
+
+    const matchesCourse = courseFilter ? s.course === courseFilter : true;
+    const matchesSection = sectionFilter ? s.section === sectionFilter : true;
+
+    return matchesSearch && matchesCourse && matchesSection;
+  });
+
   const handleCSV = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -45,23 +76,19 @@ const StudentManagement = () => {
       skipEmptyLines: true,
       transformHeader: (h) => h.trim().toLowerCase().replace(/[^a-zA-Z0-9]/g, ""),
       complete: async (results) => {
-        
-        // Map CSV headers to Backend fields
         const formattedData = results.data.map(row => ({
           name: row.name,
           email: row.email,
           idNumber: row.idnumber || row.id || row.studentno, 
           middleName: row.middlename || row.mname || '',
-          course: row.course,
-          section: row.section
+          course: row.course, // Ensure your CSV has this column
+          section: row.section // Ensure your CSV has this column
         }));
 
         const validData = formattedData.filter(r => r.email && r.name);
-
         if (validData.length === 0) {
             alert("No valid rows found. Check your CSV format.");
-            e.target.value = null;
-            return;
+            e.target.value = null; return;
         }
 
         try {
@@ -72,11 +99,8 @@ const StudentManagement = () => {
           alert(`Success! ${validData.length} students processed.`);
           fetchStudents();
         } catch (err) { 
-          const msg = err.response?.data?.message || err.message;
-          alert("Upload Failed: " + msg); 
-        } finally {
-          e.target.value = null; 
-        }
+          alert("Upload Failed: " + (err.response?.data?.message || err.message)); 
+        } finally { e.target.value = null; }
       }
     });
   };
@@ -128,33 +152,57 @@ const StudentManagement = () => {
     setFormData({ name: '', email: '', idNumber: '', middleName: '', course: '', section: '' });
   };
 
-  const filteredStudents = students.filter(s => 
-    s.name.toLowerCase().includes(filter.toLowerCase()) || 
-    (s.idNumber && s.idNumber.includes(filter)) ||
-    (s.section && s.section.toLowerCase().includes(filter.toLowerCase()))
-  );
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Header title="Student Management" />
       <main className="max-w-7xl mx-auto p-6">
         
-        <div className="bg-white p-6 rounded-xl border border-gray-200 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="bg-white p-6 rounded-xl border border-gray-200 mb-6 flex flex-col xl:flex-row justify-between items-center gap-4">
            <div>
              <h2 className="font-bold text-xl text-gray-800">Student Masterlist</h2>
              <p className="text-sm text-gray-500">View and manage enrolled students.</p>
            </div>
            
-           <div className="flex gap-3">
+           <div className="flex flex-wrap gap-3 items-center">
+             
+             {/* --- NEW: Course Filter Dropdown --- */}
+             <div className="relative">
+                <Filter size={16} className="absolute left-3 top-3.5 text-gray-400" />
+                <select 
+                  className="pl-9 p-3 bg-gray-50 border rounded-xl text-sm font-bold outline-ssu-maroon min-w-[120px]"
+                  value={courseFilter}
+                  onChange={(e) => {
+                    setCourseFilter(e.target.value);
+                    setSectionFilter(''); // Reset section when course changes
+                  }}
+                >
+                  <option value="">All Courses</option>
+                  {uniqueCourses.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+             </div>
+
+             {/* --- NEW: Section Filter Dropdown --- */}
+             <div className="relative">
+                <select 
+                  className="p-3 bg-gray-50 border rounded-xl text-sm font-bold outline-ssu-maroon min-w-[100px]"
+                  value={sectionFilter}
+                  onChange={(e) => setSectionFilter(e.target.value)}
+                >
+                  <option value="">All Sections</option>
+                  {uniqueSections.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+             </div>
+
              <div className="relative">
                 <Search size={18} className="absolute left-3 top-3 text-gray-400" />
                 <input 
                   type="text" 
-                  placeholder="Search..." 
-                  className="pl-10 p-3 bg-gray-50 border rounded-xl w-64 text-sm outline-ssu-maroon"
-                  onChange={(e) => setFilter(e.target.value)}
+                  placeholder="Search name, ID..." 
+                  className="pl-10 p-3 bg-gray-50 border rounded-xl w-48 text-sm outline-ssu-maroon"
+                  onChange={(e) => setSearch(e.target.value)}
                 />
              </div>
+
              <button onClick={() => setShowModal(true)} className="bg-ssu-maroon text-white px-4 py-3 rounded-xl font-bold hover:bg-red-900 transition flex items-center gap-2">
                <Plus size={18} /> Add
              </button>
@@ -171,35 +219,46 @@ const StudentManagement = () => {
               <tr>
                 <th className="p-4">Name</th>
                 <th className="p-4">ID Number</th>
-                <th className="p-4">Course/Year</th>
+                <th className="p-4">Email</th>
+                <th className="p-4">Course</th>
                 <th className="p-4">Section</th>
                 <th className="p-4 text-center">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredStudents.map(s => (
-                <tr key={s._id} className="hover:bg-gray-50">
-                  <td className="p-4 font-bold text-gray-800 flex items-center gap-2">
-                    <div className="bg-blue-50 p-2 rounded-full text-blue-600"><User size={14}/></div>
-                    {s.name}
-                  </td>
-                  <td className="p-4 font-mono text-xs">{s.idNumber || 'N/A'}</td>
-                  <td className="p-4">{s.course || 'N/A'}</td>
-                  <td className="p-4">
-                    <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
-                      {s.section || 'Irr'}
-                    </span>
-                  </td>
-                  <td className="p-4 flex justify-center gap-2">
-                    <button onClick={() => openEdit(s)} className="text-blue-600 hover:bg-blue-50 p-2 rounded"><Edit size={16}/></button>
-                    <button onClick={() => handleDelete(s._id)} className="text-red-600 hover:bg-red-50 p-2 rounded"><Trash2 size={16}/></button>
-                  </td>
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map(s => (
+                  <tr key={s._id} className="hover:bg-gray-50">
+                    <td className="p-4 font-bold text-gray-800 flex items-center gap-2">
+                      <div className="bg-blue-50 p-2 rounded-full text-blue-600"><User size={14}/></div>
+                      {s.name}
+                    </td>
+                    <td className="p-4 font-mono text-xs">{s.idNumber || 'N/A'}</td>
+                    <td className="p-4 font-mono text-xs">{s.email || 'N/A'}</td>
+                    <td className="p-4 font-bold text-xs">{s.course || '-'}</td>
+                    <td className="p-4">
+                      <span className="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">
+                        {s.section || 'Irr'}
+                      </span>
+                    </td>
+                    <td className="p-4 flex justify-center gap-2">
+                      <button onClick={() => openEdit(s)} className="text-blue-600 hover:bg-blue-50 p-2 rounded"><Edit size={16}/></button>
+                      <button onClick={() => handleDelete(s._id)} className="text-red-600 hover:bg-red-50 p-2 rounded"><Trash2 size={16}/></button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                   <td colSpan="6" className="p-8 text-center text-gray-400">
+                     No students found matching filters.
+                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>
 
+        {/* Modal Logic Remains Same */}
         {showModal && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl">
