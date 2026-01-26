@@ -95,32 +95,64 @@ const SubjectManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // CONSTRUCTION: Format data to match the Mongoose Schema
+      const payload = {
+        subjectCode: subjectForm.subjectCode,
+        subjectName: subjectForm.subjectName,
+        faculty: subjectForm.facultyId, // MAPPING: facultyId (Form) -> faculty (Schema)
+        schedule: {                     // MAPPING: Nest flat fields into 'schedule' object
+          day: subjectForm.day,
+          startTime: subjectForm.startTime,
+          endTime: subjectForm.endTime
+        },
+        room: subjectForm.room,
+        course: subjectForm.course,
+        section: subjectForm.section,
+        semester: subjectForm.semester,
+        isActive: true
+      };
+
+      const API_URL = 'https://fac-dss-be.onrender.com/api/admin'; // Or use your env variable
+
       if (editingSubject) {
-        await axios.put(`https://fac-dss-be.onrender.com/api/admin/subjects/${editingSubject._id}`, subjectForm, {
+        await axios.put(`${API_URL}/subjects/${editingSubject._id}`, payload, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
-        alert("Subject Updated!");
+        alert("Subject Updated Successfully!");
       } else {
-        await axios.post('https://fac-dss-be.onrender.com/api/admin/create-subject', subjectForm, {
+        await axios.post(`${API_URL}/create-subject`, payload, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
-        alert("Subject Added!");
+        alert("Subject Added Successfully!");
       }
       closeModal();
       fetchSubjects();
     } catch (err) {
+      console.error(err);
       alert("Error: " + (err.response?.data?.message || err.message));
     }
   };
 
   const openEdit = (sub) => {
     setEditingSubject(sub);
+    
     setSubjectForm({
-      subjectName: sub.subjectName, subjectCode: sub.subjectCode,
-      facultyId: sub.faculty?._id,
-      day: sub.schedule.day, startTime: sub.schedule.startTime, endTime: sub.schedule.endTime,
-      room: sub.room, course: sub.course, section: sub.section, semester: sub.semester
+      subjectName: sub.subjectName, 
+      subjectCode: sub.subjectCode,
+      // Handle faculty whether it's populated (object) or just an ID (string)
+      facultyId: sub.faculty?._id || sub.faculty || '', 
+      
+      // FLATTENING: Pull values out of the nested 'schedule' object
+      day: sub.schedule?.day || 'Monday', 
+      startTime: sub.schedule?.startTime || '', 
+      endTime: sub.schedule?.endTime || '',
+      
+      room: sub.room, 
+      course: sub.course || '', 
+      section: sub.section || '', 
+      semester: sub.semester
     });
+    
     setShowForm(true);
   };
 
