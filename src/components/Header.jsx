@@ -1,7 +1,7 @@
 import { useContext, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { LayoutDashboard, Users, BookOpen, FileText, LogOut, Settings, BackpackIcon } from 'lucide-react';
+import { LayoutDashboard, Users, BookOpen, FileText, LogOut, Settings, BackpackIcon, ArrowLeftIcon, ArrowRight } from 'lucide-react';
 import ChangePasswordModal from './ChangePasswordModal'; // Import the new modal
 
 const Header = ({ title }) => {
@@ -16,7 +16,7 @@ const Header = ({ title }) => {
     { name: 'Subjects', path: '/manage-subjects', icon: <BookOpen size={18} /> },
     // Only show "System" to HR or Dean
     { name: 'System', path: '/management', icon: <Settings size={18} /> }, 
-    { name: 'Back', path: '/admin-dashboard', icon: <BackpackIcon size={18} /> },
+    { name: 'Back', path: '/admin-dashboard', icon: <ArrowRight size={18} /> },
   ];
 
   return (
