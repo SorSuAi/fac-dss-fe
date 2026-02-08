@@ -4,7 +4,7 @@ import { AuthContext } from '../context/AuthContext';
 import Header from '../components/Header';
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable"; 
-import { Download, Filter, FileText } from 'lucide-react';
+import { Download, Filter, FileText, Calendar } from 'lucide-react';
 
 const Reports = () => {
   const { user } = useContext(AuthContext);
@@ -13,29 +13,31 @@ const Reports = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // Define API Base URL
+  // New Date States
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+
   const API_URL = 'https://fac-dss-be.onrender.com/api';
 
+  // Re-fetch when reportType, semester, or dates change
   useEffect(() => {
     fetchData();
-  }, [reportType, semester]); // Re-fetch when these change
+  }, [reportType, semester, startDate, endDate]);
 
   const fetchData = async () => {
     setLoading(true);
-    setData([]); // Clear data while loading to prevent confusion
+    setData([]); 
     try {
       let endpoint = '';
-      let params = {};
+      let params = { semester }; // Base params
 
       if (reportType === 'attendance') {
         endpoint = `${API_URL}/admin/reports`;
-        // Send status AND semester
-        params = { status: 'Accepted', semester: semester }; 
+        // Include status and date range for absence reports
+        params = { ...params, status: 'Accepted', startDate, endDate }; 
       } else if (reportType === 'faculty') {
         endpoint = `${API_URL}/admin/users`;
         params = { role: 'faculty' }; 
-        // Note: Users typically don't have a 'semester' field unless you added it.
-        // If you want to filter faculty by semester, you'd need to filter by their assigned subjects.
       } else if (reportType === 'students') {
         endpoint = `${API_URL}/admin/users`;
         params = { role: 'student' };
@@ -56,8 +58,7 @@ const Reports = () => {
   const downloadPDF = () => {
     const doc = new jsPDF();
     
-    // Header Info
-    doc.setFillColor(128, 0, 0); // Maroon Header Box
+    doc.setFillColor(128, 0, 0); // SSU Maroon
     doc.rect(0, 0, 210, 40, "F");
     
     doc.setTextColor(255, 255, 255);
@@ -66,12 +67,16 @@ const Reports = () => {
     
     doc.setFontSize(10);
     doc.text(`Semester: ${semester}`, 14, 28);
-    doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 33);
+    // Add date range to PDF if present
+    if (startDate || endDate) {
+        doc.text(`Period: ${startDate || '...'} to ${endDate || '...'}`, 14, 33);
+    } else {
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 33);
+    }
 
     let columns = [];
     let rows = [];
 
-    // Define Columns based on type
     if (reportType === 'attendance') {
       columns = ["Date", "Faculty", "Subject", "Reason"];
       rows = data.map(d => [
@@ -97,7 +102,7 @@ const Reports = () => {
       alternateRowStyles: { fillColor: [245, 245, 245] }
     });
 
-    doc.save(`SSU_${reportType}_${semester}.pdf`);
+    doc.save(`SSU_${reportType}_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   return (
@@ -105,48 +110,80 @@ const Reports = () => {
       <Header title="Analytics & Reports" />
       
       <main className="max-w-7xl mx-auto p-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col md:flex-row justify-between gap-4 items-end">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6 flex flex-col gap-6">
           
-          <div className="flex gap-4 w-full md:w-auto">
-            <div className="space-y-1 w-full md:w-auto">
-              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <FileText size={12}/> Report Type
-              </label>
-              <select 
-                className="block w-full md:w-48 p-2.5 bg-gray-50 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-ssu-maroon outline-none"
-                value={reportType}
-                onChange={(e) => setReportType(e.target.value)}
-              >
-                <option value="attendance">Absence Reports</option>
-                <option value="faculty">Faculty Masterlist</option>
-                <option value="students">Student Masterlist</option>
-              </select>
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div className="flex flex-wrap gap-4">
+              {/* Report Type */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                  <FileText size={12}/> Report Type
+                </label>
+                <select 
+                  className="block w-full md:w-48 p-2.5 bg-gray-50 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-ssu-maroon outline-none"
+                  value={reportType}
+                  onChange={(e) => setReportType(e.target.value)}
+                >
+                  <option value="attendance">Absence Reports</option>
+                  <option value="faculty">Faculty Masterlist</option>
+                  <option value="students">Student Masterlist</option>
+                </select>
+              </div>
+
+              {/* Semester */}
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                  <Filter size={12}/> Semester
+                </label>
+                <select 
+                  className="block w-full md:w-48 p-2.5 bg-gray-50 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-ssu-maroon outline-none"
+                  value={semester}
+                  onChange={(e) => setSemester(e.target.value)}
+                >
+                  <option value="1st Sem 2025-2026">1st Sem 2025-2026</option>
+                  <option value="2nd Sem 2025-2026">2nd Sem 2025-2026</option>
+                </select>
+              </div>
+
+              {/* Date Filters - Conditionally visible for Attendance */}
+              {reportType === 'attendance' && (
+                <>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                      <Calendar size={12}/> Start Date
+                    </label>
+                    <input 
+                      type="date"
+                      className="block p-2 bg-gray-50 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-ssu-maroon outline-none"
+                      value={startDate}
+                      onChange={(e) => setStartDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
+                      <Calendar size={12}/> End Date
+                    </label>
+                    <input 
+                      type="date"
+                      className="block p-2 bg-gray-50 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-ssu-maroon outline-none"
+                      value={endDate}
+                      onChange={(e) => setEndDate(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
-            <div className="space-y-1 w-full md:w-auto">
-              <label className="text-xs font-bold text-gray-500 uppercase flex items-center gap-1">
-                <Filter size={12}/> Semester
-              </label>
-              <select 
-                className="block w-full md:w-48 p-2.5 bg-gray-50 border rounded-lg text-sm font-bold focus:ring-2 focus:ring-ssu-maroon outline-none"
-                value={semester}
-                onChange={(e) => setSemester(e.target.value)}
-              >
-                <option value="1st Sem 2025-2026">1st Sem 2025-2026</option>
-                <option value="2nd Sem 2025-2026">2nd Sem 2025-2026</option>
-              </select>
-            </div>
+            <button 
+              onClick={downloadPDF}
+              disabled={data.length === 0}
+              className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-white transition shadow-sm self-end ${
+                data.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'
+              }`}
+            >
+              <Download size={18} /> Export PDF
+            </button>
           </div>
-
-          <button 
-            onClick={downloadPDF}
-            disabled={data.length === 0}
-            className={`flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-white transition shadow-sm ${
-              data.length === 0 ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-700 hover:bg-green-800'
-            }`}
-          >
-            <Download size={18} /> Export PDF
-          </button>
         </div>
 
         {/* Data Table Preview */}
@@ -171,7 +208,7 @@ const Reports = () => {
               ) : data.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="p-12 text-center text-gray-400 italic">
-                    No records found for this semester.
+                    No records found for the selected filters.
                   </td>
                 </tr>
               ) : (
@@ -189,6 +226,7 @@ const Reports = () => {
                     <td className="p-4 text-gray-500 text-xs">{new Date(item.createdAt).toLocaleDateString()}</td>
                   </>}
 
+                  {/* Faculty/Student mapping remains unchanged as per your original file */}
                   {reportType === 'faculty' && <>
                     <td className="p-4 font-bold text-gray-800">{item.name}</td>
                     <td className="p-4">{item.department || '-'}</td>

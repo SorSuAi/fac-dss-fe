@@ -5,7 +5,7 @@ import { AlertCircle, CheckCircle2, Send, BookOpen, Clock, Settings, LogOut, Cal
 import ChangePasswordModal from '../components/ChangePasswordModal'; // Ensure you have this component
 
 const StudentDashboard = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, apiUrl } = useContext(AuthContext);
   
   // State
   const [subjects, setSubjects] = useState([]);
@@ -20,12 +20,12 @@ const StudentDashboard = () => {
   const days = ['All', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
   // API URL
-  const API_URL = 'https://fac-dss-be.onrender.com/api';
+  // const API_URL = 'https://fac-dss-be.onrender.com/api';
 
   useEffect(() => {
     const fetchMySubjects = async () => {
       try {
-        const res = await axios.get(`${API_URL}/student/my-subjects`, {
+        const res = await axios.get(`${apiUrl}/student/my-subjects`, {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         setSubjects(res.data);
@@ -36,27 +36,64 @@ const StudentDashboard = () => {
     if (user) fetchMySubjects();
   }, [user]);
 
+  // const handleSubmitReport = async (subject) => {
+  //   if (!confirm(`Report instructor absence for ${subject.subjectCode}?`)) return;
+
+  //   try {
+  //     // Simulate checking if class started 20 mins ago
+  //     const classStart = new Date();
+  //     classStart.setMinutes(classStart.getMinutes() - 25);
+
+  //     await axios.post(`${apiUrl}/student/submit-report`, {
+  //       facultyId: subject.faculty._id || subject.faculty, // Handle populated vs unpopulated
+  //       subjectId: subject._id,
+  //       classStartTime: classStart.toISOString()
+  //     }, {
+  //       headers: { Authorization: `Bearer ${user.token}` }
+  //     });
+
+  //     setStatus('success');
+  //     setMessage(`Report successfully sent for ${subject.subjectCode}`);
+  //   } catch (err) {
+  //     setStatus('error');
+  //     setMessage(err.response?.data?.message || "An error occurred");
+  //   }
+  // };
+
+
   const handleSubmitReport = async (subject) => {
+    // 1. Confirmation Dialog
     if (!confirm(`Report instructor absence for ${subject.subjectCode}?`)) return;
 
     try {
-      // Simulate checking if class started 20 mins ago
-      const classStart = new Date();
-      classStart.setMinutes(classStart.getMinutes() - 25);
-
-      await axios.post(`${API_URL}/student/submit-report`, {
-        facultyId: subject.faculty._id || subject.faculty, // Handle populated vs unpopulated
+      // Logic: Send the report request to the backend. 
+      // The backend now handles the "Unconfirmed" vs "Pending" transition.
+      const res = await axios.post(`${apiUrl}/student/submit-report`, {
+        facultyId: subject.faculty?._id || subject.faculty, 
         subjectId: subject._id,
-        classStartTime: classStart.toISOString()
+        // Optional: Sending current time, though backend testing currently ignores the 20-min rule
+        classStartTime: new Date().toISOString() 
       }, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
 
+      // 2. Success Feedback (Transitioned to Unconfirmed or Pending)
       setStatus('success');
-      setMessage(`Report successfully sent for ${subject.subjectCode}`);
+      setMessage(res.data.message || `Report successfully sent for ${subject.subjectCode}`);
+      
+      // Clear status after 5 seconds
+      setTimeout(() => setStatus(null), 5000);
+
     } catch (err) {
+      // 3. Error Feedback (Handles "Invalid Report" if already submitted)
       setStatus('error');
-      setMessage(err.response?.data?.message || "An error occurred");
+      const errorMsg = err.response?.data?.message || "An error occurred";
+      setMessage(errorMsg);
+      
+      // If it's a duplicate report error, keep it visible longer
+      if (err.response?.status === 400) {
+        console.warn("Duplicate report attempted.");
+      }
     }
   };
 

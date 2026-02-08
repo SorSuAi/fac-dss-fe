@@ -6,7 +6,7 @@ import Header from '../components/Header';
 import { Upload, Search, User, Trash2, Edit, Plus, X, Filter } from 'lucide-react';
 
 const StudentManagement = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout, apiUrl } = useContext(AuthContext);
   const [students, setStudents] = useState([]);
   
   // --- NEW: Specific Filter States ---
@@ -28,7 +28,8 @@ const StudentManagement = () => {
 
   const fetchStudents = async () => {
     try {
-      const res = await axios.get('https://fac-dss-be.onrender.com/api/admin/users?role=student', {
+      const res = await axios.get(`${apiUrl}/admin/users?role=student`, { 
+      // const res = await axios.get('https://fac-dss-be.onrender.com/api/admin/users?role=student', {
         headers: { Authorization: `Bearer ${user.token}` } 
       });
       setStudents(res.data);
@@ -92,7 +93,8 @@ const StudentManagement = () => {
         }
 
         try {
-          await axios.post('https://fac-dss-be.onrender.com/api/admin/manage-users/bulk', {
+          // await axios.post('https://fac-dss-be.onrender.com/api/admin/manage-users/bulk', {
+          await axios.post(`${apiUrl}/admin/manage-users/bulk`, {
             users: validData, role: 'student'
           }, { headers: { Authorization: `Bearer ${user.token}` } });
           
