@@ -3,10 +3,11 @@ import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { Clock, BookOpen, MapPin, Calendar, CheckCircle, Settings, LogOut } from 'lucide-react';
 import ChangePasswordModal from '../components/ChangePasswordModal'; // Ensure this path is correct
+import { useNavigate } from 'react-router-dom'; // Add this import at the top
 
 const FacultyDashboard = () => {
   const { user, logout } = useContext(AuthContext);
-  
+  const navigate = useNavigate();
   // Data State
   const [subjects, setSubjects] = useState([]);
   const [activeSession, setActiveSession] = useState(null);
@@ -40,29 +41,11 @@ const FacultyDashboard = () => {
     }
   };
 
-  const handleStartClass = async (subject) => {
+  const handleStartClass = (subject) => {
     if (activeSession) return alert("You already have an active class!");
     
-    const confirmStart = window.confirm(`Start class for ${subject.subjectCode}?`);
-    if (!confirmStart) return;
-
-    try {
-      const res = await axios.post(`${API_URL}/attendance/time-in`, {
-        subjectId: subject._id,
-        location: subject.room || "Room TBD" 
-      }, {
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-
-      setActiveSession({
-        ...res.data, 
-        subject: subject 
-      });
-
-      alert("Class Started! Students can now scan to attend.");
-    } catch (err) {
-      alert("Error starting class: " + (err.response?.data?.message || err.message));
-    }
+    // Send the faculty to the scanner page, passing the class data in state
+    navigate('/scan/room', { state: { selectedClass: subject } });
   };
 
   const handleEndClass = async () => {
